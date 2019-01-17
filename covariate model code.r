@@ -10,25 +10,30 @@
 
 #Read in the occurence data
 data1 <- read.table("occ data.csv", header=TRUE,sep=",",na.strings=TRUE)
+#Add a column "Occ" = 1, indicating the species was detected during that visit to that point
 data1$Occ <- rep(1, dim(data1)[1])
+
 #See the first ten lines of data
 data1[1:10,]
+
 #How many citings for each species
 total.count = tapply(data1$Occ, data1$Species, sum)
+total.count
 
 #Find the number of unique species
 uspecies = as.character(unique(data1$Species))
+
 #n is the number of observed species
 n=length(uspecies)
 
 #Load the species groups data
 groups <- read.table("groups.csv", header=TRUE,sep=",",na.strings=c("NA"))
 species = as.character(groups$species)
-assmb = groups$group
-a=which(assmb==1)
-ground = assmb; ground[-a] = 0
-b=which(assmb==2)
-mid=assmb; mid[-b] = 0; mid[b]=1
+assmb = groups$group #Extracting group membership as a vector
+a=which(assmb==1) #Finding the index value for each species in group 1
+ground = assmb; ground[-a] = 0 # creates a vector of 0/1, where 1 = ground nester
+b=which(assmb==2) # Finding the index value for each species in group 2
+mid=assmb; mid[-b] = 0; mid[b]=1 # creates a vector of 0/1, where 1 = canopy nester
 
 #Find the number of unique sampling locations
 upoints = as.character(unique(data1$Point))
@@ -38,13 +43,26 @@ J=length(upoints)
 #Reshape the data using the R package "reshape"
 library(reshape)
 
+
+
 #The detection/non-detection data is reshaped into a three dimensional 
 #array X where the first dimension, j, is the point; the second 
 #dimension, k, is the rep; and the last dimension, i, is the species. 
 junk.melt=melt(data1,id.var=c("Species", "Point", "Rep"), measure.var="Occ")
-X=cast(junk.melt, Point ~ Rep ~ Species)
+X=cast(junk.melt, Point ~ Rep ~ Species) 
+
+#X looks like this, with a point X rep matrix, one for each species:
+# ,,AMRE
+#                   Rep
+# Point      1    2    3     4
+# CATO003    0    0    1     0
+# CATO004    0    0    0     0
 
 #Add in the missing lines with NAs
+# dim(X)[3] is the number of species
+# This changes counts to 1s,
+# and seems to add NA for points not surveyed 4 times.
+
 for (i in 1: dim(X)[3]) {
    b = which(X[,,i] > 0) 
    X[,,i][b] = 1  
@@ -71,12 +89,14 @@ for (i in 1: dim(X)[3]) {
   Xaug[,,1:dim(X)[3]] <-  X
 
 #K is a vector of length J indicating the number of reps at each point j  
+# This is a really complicated way of adding up reps at each point!
 KK <- X.zero
 a=which(KK==0); KK[a] <- 1
 K=apply(KK,1,sum, na.rm=TRUE)
 K=as.vector(K)
 
 #Create a vector to indicate which habitat type each point is in (CATO = 1; FCW =0)
+#CATO is a site with high deer density; FCW is a site with low deer density
 Ind <- as.vector(cbind(matrix(rep(0,35),ncol=1,nrow=35),
       matrix(rep(1,35),ncol=1,nrow=35)));
 
@@ -99,6 +119,7 @@ ba2 <- as.vector( ba1*ba1 )
 
 #Read in the date data
 #The sampling dates have been converted to Julien dates
+# This also standardizes the date values and creates a "Date Squared" vector
 dates <- read.table("dates.csv", header=TRUE,sep=",",na.strings=c("NA"))
 dates <- as.matrix(dates[,c("rep1","rep2","rep3","rep3")])
 mdate <- mean(dates, na.rm=TRUE)
@@ -113,20 +134,38 @@ cat("
    model{
 
 #Define prior distributions for community-level model parameters
+#Omega is the parameter estimating the prob that a species is included in the hyper-community
+
 omega ~ dunif(0,1)
 
 cato.mean ~ dunif(0,1)
-mu.ucato <- log(cato.mean) - log(1-cato.mean)
+
+#mu.ucato is the mean occurrence across the community in CATO
+
+mu.ucato <- log(cato.mean) - log(1-cato.mean) 
 
 fcw.mean ~ dunif(0,1)
+
+#mu.ufcw is the mean occurence across the community in FCW
 mu.ufcw <- log(fcw.mean) - log(1-fcw.mean)
 
+#This is the prior for the community level hyper-parameter on mean detection at CATO
 cato2.mean ~ dunif(0,1)
 mu.vcato <- log(cato2.mean) - log(1-cato2.mean)
 
+# This is the prior for community level hyper-parameter on mean detection at FCW
 fcw2.mean ~ dunif(0,1)
 mu.vfcw <- log(fcw2.mean) - log(1-fcw2.mean)
 
+#These are priors for mean regression coefficients for occurrence + detection
+# Occurence:
+# mua1 = coefficient for habitat variable UFC
+# mua2 = coefficient for habitat variable UFC squared
+# mua3 = coefficient for habitat variable BA
+# mua4 = coefficient for habitat variable BA squared
+# Detection:
+# mub1 = coefficient for effect of date on detection
+# mub2 = coeffcient for effect of date squared on detection
 mua1 ~ dnorm(0, 0.001)
 mua2 ~ dnorm(0, 0.001)
 mua3 ~ dnorm(0, 0.001)
@@ -134,10 +173,15 @@ mua4 ~ dnorm(0, 0.001)
 mub1 ~ dnorm(0, 0.001)
 mub2 ~ dnorm(0, 0.001)
 
+# Variance priors:
+# for mean community occurence:
 tau.ucato ~ dgamma(0.1,0.1)  
 tau.ufcw ~ dgamma(0.1,0.1)
+# for mean community detection:
 tau.vcato ~ dgamma(0.1,0.1) 
 tau.vfcw ~ dgamma(0.1,0.1)
+
+# For each of the variables in the occurrence/detection covariate analysis:
 tau.a1 ~ dgamma(0.1,0.1)
 tau.a2 ~ dgamma(0.1,0.1)
 tau.a3 ~ dgamma(0.1,0.1)
@@ -148,6 +192,7 @@ tau.b2 ~ dgamma(0.1,0.1)
 for (i in 1:(n+nzeroes)) {
 
 #Create priors for species i from the community level prior distributions
+# w is the probability that a species was in the hyper-community
     w[i] ~ dbern(omega)
     u.cato[i] ~ dnorm(mu.ucato, tau.ucato)
     u.fcw[i] ~ dnorm(mu.ufcw, tau.ufcw)  
@@ -162,7 +207,8 @@ for (i in 1:(n+nzeroes)) {
 
 
 #Create a loop to estimate the Z matrix (true occurrence for species i 
-#at point j.      
+#at point j. Note that 'Ind' is an indicator variable showing whether
+# point was at CATO (Ind = 0) or FCW (Ind = 1)
    for (j in 1:J) {
        logit(psi[j,i]) <- u.cato[i]*(1-Ind[j]) + u.fcw[i]*Ind[j] + 
                a1[i]*ufc1[j] + a2[i]*ufc2[j] + a3[i]*ba1[j] + a4[i]*ba2[j] 
@@ -205,31 +251,58 @@ library(R2WinBUGS)
 
 #Create the necessary arguments to run the bugs() command 
 #Load all the data
+# n = number of species; nzeroes = 50 extra zero-augmented rows; J = number of points surveyed; K = number of reps per point;
+# Xaug = point X rep X species matrix of detections, with augmentation; date1 = 4 column matrix of julian dates, with each 
+# column representing a survey visit (each rep 1 - 4) and each row a point; date2 = same thing, but squared; ufc1 = vector of
+# UFC values for each point (standardized); ufc2 = same thing, squared; ba2 = squared basal area (standardized), Ind = vector of 
+# 0s and 1s, indicating which site a point was at; ground = vector of 0s and 1s indicating whether a species is or is not a ground
+# nester; mid = vector of 0s and 1s indicating whether a species is or is not a canopy nester
 sp.data = list(n=n, nzeroes=nzeroes, J=J, K=K, X=Xaug, date1=date1,
                date2=date2, ufc1=ufc1, ba1=ba1, ufc2=ufc2, 
                ba2=ba2, Ind=Ind, ground=ground, mid=mid)
 
 #Specify the parameters to be monitored
-sp.params = list('u.cato', 'u.fcw', 'v.cato', 'v.fcw', 'omega', 'a1', 
-		'a2', 'a3', 'a4', 'b1', 'b2', 'Nsite', 'N', 'Nground', 'Nmid') 
+#sp.params = list('u.cato', 'u.fcw', 'v.cato', 'v.fcw', 'omega', 'a1', 
+#		'a2', 'a3', 'a4', 'b1', 'b2', 'Nsite', 'N', 'Nground', 'Nmid') 
 
+sp.params = c('u.cato', 'u.fcw', 'v.cato', 'v.fcw', 'omega', 'a1', 
+                 'a2', 'a3', 'a4', 'b1', 'b2', 'Nsite', 'N', 'Nground', 'Nmid') 
 #Specify the initial values
+# Note that the original initial values for the Z matrix
+# caused a "parent node" error in JAGS that could only be 
+# fixed by changing the initial values. The original
+# values are commented out.
+ zinits <- apply(Xaug,c(1,3),max,na.rm=TRUE)
     sp.inits = function() {
     omegaGuess = runif(1, n/(n+nzeroes), 1)
     psi.meanGuess = runif(1, .25,1)
     list(omega=omegaGuess,w=c(rep(1, n), rbinom(nzeroes, size=1, prob=omegaGuess)),
                u.cato=rnorm(n+nzeroes), v.cato=rnorm(n+nzeroes),
                u.fcw=rnorm(n+nzeroes), v.fcw=rnorm(n+nzeroes),
-               Z = matrix(rbinom((n+nzeroes)*J, size=1, prob=psi.meanGuess), 
-		                nrow=J, ncol=(n+nzeroes)), 
-               a1=rnorm(n+nzeroes), a2=rnorm(n+nzeroes), a3=rnorm(n+nzeroes), 
+               #Z = matrix(rbinom((n+nzeroes)*J, size=1, prob=psi.meanGuess), 
+		           #     nrow=J, ncol=(n+nzeroes)), 
+               Z = zinits, a1=rnorm(n+nzeroes), a2=rnorm(n+nzeroes), a3=rnorm(n+nzeroes), 
                a4=rnorm(n+nzeroes), b1=rnorm(n+nzeroes), b2=rnorm(n+nzeroes)
                )
-           }
+    }
+    
+
+# MCMC settings
+    ni <- 50000 # number of total iterations per chain
+    nt <-    20 # thinning rate 
+    nb <- 30000 # number of iterations to discard at the beginning
+    nc <-     3 # number of Markov chains
+    na <- 10000 # Number of iterations to run in the JAGS adaptive phase.
  
-#Run the model and call the results “fit”
-fit = bugs(sp.data, sp.inits, sp.params, "covarmodel.txt", debug=TRUE, 
-         n.chains=2, n.iter=10000, n.burnin=5000, n.thin=5)
+#Run the model and call the results ?fit?
+library(jagsUI)
+
+fit <- jagsUI(data = sp.data, inits = sp.inits, sp.params,
+              "covarmodel.txt", n.chains = nc, n.thin = nt,
+              n.iter = ni, n.burnin = nb, n.adapt = na, parallel = T, store.data=T)
+       
+#fit = bugs(sp.data, sp.inits, sp.params, "covarmodel.txt", debug=TRUE, 
+#         n.chains=2, n.iter=10000, n.burnin=5000, n.thin=5)
 
 #######################################################################
 #Summarize some results

@@ -1,0 +1,604 @@
+#CHANGES IN FOREST-BIRD ASSEMBLAGES ON PUERTO RICO FOLLOWING HURRICANE MARIA#
+
+# Hypotheses to test.
+# Tropical storms strip plants of fruit and flowers, reducing food for frugivorous and nectarivorous birds. Reduced food availability
+# results in increased mortality or increased emigration, which in turn results in lower occupancy rates following significant storms.
+
+# Prediction: Persistence rates will be lower for frugivores and nectarivores than for carnivores, insectivores, or granivores.
+# Key test: Mean persistence rate of frugivores and nectarivores v. mean persistence rate of insectivores and granivores.
+# 
+# Increased mortality or emigration due to reduced food availability will result in lower species richness following significant storms.
+
+# Prediction: Total species richness (including unobserved species) will be lower in 2018 than 2015.
+
+# Key test: N ("true" species richness) is lower in 2018 than 2015.
+# Key test: Point-specific species richness is lower in 2018 than 2015. 
+# Key test: Point-specific richness of frugivores and insectivores is lower in 2018 than 2015. 
+# Key test: Community-wide extinction rates exceed community-wide colonization rates.
+
+#Read in the occurence data
+data2015 <- read.table("/Users/johnlloyd/Documents/GitHub/puertoRicoHurricaneStudy/Survey_data_PuertoRico_counts.csv", header=TRUE,sep=",",na.strings=TRUE)
+data2017 <- read.table("/Users/johnlloyd/Documents/GitHub/puertoRicoHurricaneStudy/surveyDataPuertoRicoPostHurricaneCounts.csv", header = TRUE,
+                      sep = ",", na.strings = c("","#N/A"), fill = TRUE)
+colnames(data2015) <- c("site", "point", "date", "rep","speciesName", "speciesCode","count", "distance","detectionType")
+colnames(data2017) <- c("site", "point", "date", "rep","speciesName", "speciesCode","count", "distance","detectionType")
+#Bind the two years together
+dataAll <- rbind(data2015,data2017)
+#colnames(dataAll) <- c("site", "point", "date", "rep","speciesName", "speciesCode","count", "distance","detectionType")
+dataAll$date <- as.POSIXct(dataAll$date, format = "%m/%d/%y")
+str(dataAll)
+#Add a column "Occ" = 1, indicating the species was detected during that visit to that point
+dataAll$occ <- rep(1, dim(dataAll)[1])
+
+#Remove lines that had no species recorded (these are either birds that couldn't be identified or instances where no birds were detected during a count)
+dataAll <- dataAll[which(!is.na(dataAll$speciesCode)),]
+
+#Convert distance description to codes
+dataAll$distance <- as.factor(ifelse(dataAll$distance == ">50", "4",
+                           ifelse(dataAll$distance == "0-10", "1",
+                                  ifelse(dataAll$distance == "11-25", "2",
+                                         ifelse(dataAll$distance == "26-50", "3",
+                                                ifelse(dataAll$distance == "Fly-over/Volandos", "FO", NA))))))
+
+library(lubridate)
+dataAll$year <- year(dataAll$date)
+
+#Check to see which points have data for both years:
+table(dataAll$point, dataAll$year) 
+
+#Missing from 2015: 1347(1-5),4082-5, 5373-4, 6571-5, 6741-4, 6881 (4&5),7796 (1-5)
+#Missing from 2018: 10602-5,1342 (1-4), 5373-3,5717 (3-5), 6383-5,6564 (4 & 5), 6877-3,7015-5A, 7015-5B,7965(1-5),8280(4&5)
+
+#How many sightings for each species
+total.count <- tapply(dataAll$occ, dataAll$speciesName, sum)
+total.count
+
+
+#Find the number of unique sampling locations
+upoints = as.character(unique(dataAll$point))
+#J is the number of sampled points
+J=length(upoints)
+
+#Reshape the data using the R package "reshape"
+library(reshape)
+
+# Prepare the data by removing fly-overs and observations outside of the count period
+occData <- subset(dataAll, dataAll$distance != "FO")
+occData <- subset(occData, !is.na(occData$rep))
+
+#Find the number of unique species, excluding FO and observations outside the count period
+uspecies <- as.character(unique(occData$speciesCode))
+#n is the number of observed species
+n <- length(uspecies)
+
+#groups: 1 = nectarivore, 2 = frugivore, 3 = insectivore, 4 = granivore, 5 = omnivore, 6 = carnivore, 7 = waterbird/shorebird
+dietGroups <- c(6, 1, 1, 7, 2, 7, 6, 7, 6, 3, 1, 5, 5, 1, 4, 4, 3, 5, 3, 2, 4, 1, 2, 2, 6, 2, 2, 5, 5, 5, 5, 6, 3, 5, 3, 4, 3,
+                2, 1, 3, 4, 2, 2, 3, 3, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 2, 7, 4, 4, 3, 5, 3, 3, 3, 3, 4, 4, 6, 7, 7, 7, 7, 7, 7, 3, 4, 2,
+                3, 7, 7, 7, 7, 6)
+
+#migrantGroups: 1 = resident, 2 = migrant
+migrantGroups <- c(1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 
+                   1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 2, 1,
+                   2, 2, 1, 1, 1, 1)
+
+groupsData <- cbind(uspecies, dietGroups, migrantGroups)
+colnames(groupsData) <- c("speciesCode", "dietGroup", "migrantGroup")
+
+#The following was to deal with the fact that the group vectors above included species that were later filtered b/c they
+# were flyovers or recorded outside the count period. So I found the ones that didn't match "uspecies", and removed them.
+groupCovs <- matrix(groupsData[groupsData[,1] %in% uspecies], nrow = 75, ncol = 3)
+ 
+dietGroup <- groupCovs[,2]
+dietGroup <- as.vector(dietGroup, mode = "numeric")
+migrantGroup <- groupCovs[,3]
+migrantGroup <- as.vector(migrantGroup, mode = "numeric")
+
+#The detection/non-detection data is reshaped into a three dimensional 
+#array X where the first dimension, j, is the point; the second 
+#dimension, k, is the rep; and the last dimension, i, is the species. 
+junk.melt=melt(occData,id.var=c("speciesCode", "point", "rep", "year"), measure.var="occ")
+X=cast(junk.melt, point ~ year ~ rep ~ speciesCode)
+head(X[,"2018",,"SNPI"]) # Take a look at one point with missing data
+head(X["10602-5","2018",,]) # Take a look at one point with missing data
+
+for (i in 1: dim(X)[4]) {
+  b = which(X[,,,i] > 0) 
+  X[,,,i][b] = 1  
+  X[,,,i][-b] = 0  
+}
+
+# Add NA for missing values from points not surveyed
+#Missing from 2015: 1347(1-5),4082-5, 5373-4, 6571-5, 6741-4, 6881 (4&5),7796 (1-5)
+X["1347-1","2015",,][,] <- NA
+X["1347-2","2015",,][,] <- NA
+X["1347-3","2015",,][,] <- NA
+X["1347-4","2015",,][,] <- NA
+X["1347-5","2015",,][,] <- NA
+X["4082-5","2015",,][,] <- NA
+X["5373-4","2015",,][,] <- NA
+X["6571-5","2015",,][,] <- NA
+X["6741-4","2015",,][,] <- NA
+X["6881-4","2015",,][,] <- NA
+X["6881-5","2015",,][,] <- NA
+X["7796-1","2015",,][,] <- NA
+X["7796-2","2015",,][,] <- NA
+X["7796-3","2015",,][,] <- NA
+X["7796-4","2015",,][,] <- NA
+X["7796-5","2015",,][,] <- NA
+
+#Missing from 2018: 10602-5,1342 (1-5), 5373-3,5717 (3-5), 6383-5,6564 (4 & 5), 6877-3,7015-5A, 7015-5B,7965(1-5),8280(4&5)
+
+X["10602-5","2018",,][,] <- NA
+X["1342-1","2018",,][,] <- NA
+X["1342-2","2018",,][,] <- NA
+X["1342-3","2018",,][,] <- NA
+X["1342-4","2018",,][,] <- NA
+X["1342-5","2018",,][,] <- NA
+X["5373-3","2018",,][,] <- NA
+X["5717-3","2018",,][,] <- NA
+X["5717-4","2018",,][,] <- NA
+X["5717-5","2018",,][,] <- NA
+X["6383-5","2018",,][,] <- NA
+X["6564-4","2018",,][,] <- NA
+X["6564-5","2018",,][,] <- NA
+X["6877-3","2018",,][,] <- NA
+X["7015-5A","2018",,][,] <- NA
+X["7015-5B","2018",,][,] <- NA
+X["7965-1","2018",,][,] <- NA
+X["7965-2","2018",,][,] <- NA
+X["7965-3","2018",,][,] <- NA
+X["7965-4","2018",,][,] <- NA
+X["7965-5","2018",,][,] <- NA
+X["8280-4","2018",,][,] <- NA
+X["8280-5","2018",,][,] <- NA
+
+## Data augmentation. We observed 75 different species, out of a possible ~293 species that might occur during the winter months.
+#Create all zero encounter histories to add to the detection array X 
+#as part of the data augmentation to account for additional 
+#species (beyond the n observed species). 
+
+#nzeroes is the number of all zero encounter histories to be added
+nzeroes = 293-75
+
+#X.zero is an array of zeroes, including the NAs for when a point has not been sampled.
+#This is basically an array equivalent to the values for a single species. 
+#This can then be added into Xaug. 
+X.zero <- array(0,dim=c(dim(X)[1],dim(X)[2],dim(X)[3],1))
+X.zero[c(which(is.na(X)[,,,1]))] <- NA 
+
+# Create a vector K that indicates the number of surveys per point (in this case, either 4 if surveyed in only 1 year or 8 if in both)
+KK <- X.zero
+a=which(KK==0); KK[a] <- 1
+K=apply(KK,1,sum, na.rm=TRUE)
+K=as.vector(K)
+
+#Xaug is the augmented version of X.  The first n species were actually observed
+#and the n+1 through nzeroes species are all zero encounter histories  
+Xaug <- array(0, dim=c(dim(X)[1],dim(X)[2],dim(X)[3], dim(X)[4]+nzeroes))
+Xaug[,,,(dim(X)[4]+1):dim(Xaug)[4]] <- rep(X.zero, nzeroes)
+dimnames(X) <- NULL
+Xaug[,,,1:dim(X)[4]] <-  X
+
+# Set number of years
+Y <- dim(Xaug)[2]
+## Create detection covariate matrices:
+##Bring in point-data file first. 2015.
+surveyPoints2015 <- read.csv("/Users/johnlloyd/Documents/GitHub/puertoRicoHurricaneStudy/Survey_data_PuertoRico_pointinfo.csv")
+surveyPoints2015 <- surveyPoints2015[,2:16] #remove extra variables not relevant
+colnames(surveyPoints2015) <- c("site","point", "observer","recorder","date","visit","timeRep1","timeRep2","timeRep3","timeRep4",
+                                "latitude","longitude","windSpeed","windDirection","sky")
+surveyPoints2015$latitude <- as.numeric(as.character(surveyPoints2015$latitude))
+surveyPoints2015$longitude <- as.numeric(as.character(surveyPoints2015$longitude))
+surveyPoints2015$date <- as.POSIXlt(surveyPoints2015$date, format = "%m/%d/%y")
+surveyPoints2015$timeRep1 <- as.POSIXlt(paste(surveyPoints2015$date, surveyPoints2015$timeRep1), format = "%Y-%m-%d %H:%M")
+surveyPoints2015$timeRep2 <- as.POSIXlt(paste(surveyPoints2015$date, surveyPoints2015$timeRep2), format = "%Y-%m-%d %H:%M")
+surveyPoints2015$timeRep3 <- as.POSIXlt(paste(surveyPoints2015$date, surveyPoints2015$timeRep3), format = "%Y-%m-%d %H:%M")
+surveyPoints2015$timeRep4 <- as.POSIXlt(paste(surveyPoints2015$date, surveyPoints2015$timeRep4), format = "%Y-%m-%d %H:%M")
+surveyPoints2015$jdate <- yday(surveyPoints2015$date)
+
+
+suntimes <- vector("numeric", length = 211)
+suncalc <- function(d=surveyPoints2015$jdate,Lat=surveyPoints2015$latitude,Long=surveyPoints2015$longitude){
+  L <- vector(length = 211)
+  timezone <- vector(length = 211)
+  t0 <- vector(length = 211)
+  that <- vector(length = 211)
+  n <- vector(length = 211)
+  
+  for (i in 1:nrow(surveyPoints2015)){
+  
+  ## Function to convert degrees to radians
+  rad<-function(x)pi*x/180
+  
+  ##Radius of the earth (km)
+  R=6378
+  
+  ##Radians between the xy-plane and the ecliptic plane
+  epsilon=rad(23.45)
+  
+  ##Convert observer's latitude to radians
+  L[i] = rad(Lat[i])
+  
+  ## Calculate offset of sunrise based on longitude (min)
+  ## If Long is negative, then the mod represents degrees West of
+  ## a standard time meridian, so timing of sunrise and sunset should
+  ## be made later.
+  timezone[i] = -4*(abs(Long[i])%%15)*sign(Long[i])
+  
+  ## The earth's mean distance from the sun (km)
+  r = 149598000
+  
+  theta = 2*pi/365.25*(d[i]-80)
+  
+  z.s = r*sin(theta)*sin(epsilon)
+  r.p = sqrt(r^2-z.s^2)
+  
+  t0[i] = 1440/(2*pi)*acos((R-z.s*sin(L[i]))/(r.p*cos(L[i])))
+  
+  ##a kludge adjustment for the radius of the sun
+  that[i] = t0[i]+5 
+  
+  ## Adjust "noon" for the fact that the earth's orbit is not circular:
+  n[i] = 720-10*sin(4*pi*(d[i]-80)/365.25)+8*sin(2*pi*d[i]/365.25)
+  
+  ## now sunrise and sunset are:
+  suntimes[i] <<- ((n[i]-that[i]+timezone[i])/60)
+  #suntimes[i,2] = ((n[i]+that[i]+timezone[i])/60)
+  }
+suntimes
+}
+suncalc()
+#Convert the decimal times to a character time ("hh:mm")
+suntimes <- paste(floor(suntimes), round((suntimes-floor(suntimes))*60), sep=":")
+#convert to a date/time format and add to the points data file
+surveyPoints2015$sunrise <- as.POSIXlt(paste(surveyPoints2015$date,suntimes), tz = "EST", format = "%Y-%m-%d %H:%M")
+
+#Find missing values for sunset:
+which(is.na(surveyPoints2015$sunrise)) #173, 210, 211
+surveyPoints2015$sunrise[173] <- surveyPoints2015$sunrise[172] # assigned the same sunrise time as other points in this area on this day.
+surveyPoints2015$sunrise[211] <- surveyPoints2015$sunrise[209] # assigned the same sunrise time as other points in this area on this day.
+surveyPoints2015$sunrise[210] <- surveyPoints2015$sunrise[209] # assigned the same sunrise time as other points in this area on this day.
+surveyPoints2015$masRep4[93] <- surveyPoints2015$masRep3[93] + 5 # this is a guess based on the time that the previous count began.
+
+#Calculate minutes after sunset
+surveyPoints2015$masRep1 <- as.numeric((surveyPoints2015$timeRep1 - surveyPoints2015$sunrise)/60)
+surveyPoints2015$masRep2 <- as.numeric((surveyPoints2015$timeRep2 - surveyPoints2015$sunrise))
+surveyPoints2015$masRep3 <- as.numeric((surveyPoints2015$timeRep3 - surveyPoints2015$sunrise)/60)
+surveyPoints2015$masRep4 <- as.numeric((surveyPoints2015$timeRep4 - surveyPoints2015$sunrise))
+
+#2018
+surveyPoints2018 <- read.csv("/Users/johnlloyd/Documents/GitHub/puertoRicoHurricaneStudy/surveyDataPuertoRicoPostHurricanePointInfo.csv")
+surveyPoints2018 <- surveyPoints2018[,2:16] # remove extra variables
+colnames(surveyPoints2018) <- c("site","point", "observer","recorder","date","visit","timeRep1","timeRep2","timeRep3","timeRep4",
+                                "latitude","longitude","windSpeed","windDirection","sky")
+surveyPoints2018$latitude <- as.numeric(as.character(surveyPoints2018$latitude))
+surveyPoints2018$longitude <- as.numeric(as.character(surveyPoints2018$longitude))
+surveyPoints2018$date <- as.POSIXlt(surveyPoints2018$date, format = "%m/%d/%y")
+surveyPoints2018$timeRep1 <- as.POSIXlt(paste(surveyPoints2018$date, surveyPoints2018$timeRep1), format = "%Y-%m-%d %H:%M")
+surveyPoints2018$timeRep2 <- as.POSIXlt(paste(surveyPoints2018$date, surveyPoints2018$timeRep2), format = "%Y-%m-%d %H:%M")
+surveyPoints2018$timeRep3 <- as.POSIXlt(paste(surveyPoints2018$date, surveyPoints2018$timeRep3), format = "%Y-%m-%d %H:%M")
+surveyPoints2018$timeRep4 <- as.POSIXlt(paste(surveyPoints2018$date, surveyPoints2018$timeRep4), format = "%Y-%m-%d %H:%M")
+surveyPoints2018$jdate <- yday(surveyPoints2018$date)
+
+suncalc(d=surveyPoints2018$jdate,Lat=surveyPoints2018$latitude,Long=surveyPoints2018$longitude)
+#Convert the decimal times to a character time ("hh:mm")
+suntimes <- as.numeric(suntimes[!is.na(suntimes)])
+suntimes <- paste(floor(suntimes), round((suntimes-floor(suntimes))*60), sep=":")
+#convert to a date/time format and add to the points data file
+surveyPoints2018$sunrise <- as.POSIXlt(paste(surveyPoints2018$date,suntimes), tz = "EST", format = "%Y-%m-%d %H:%M")
+
+#Find missing values for sunset:
+which(is.na(surveyPoints2018$sunrise)) #none
+
+#Calculate minutes after sunset
+surveyPoints2018$masRep1 <- as.numeric((surveyPoints2018$timeRep1 - surveyPoints2018$sunrise)/60)
+surveyPoints2018$masRep2 <- as.numeric((surveyPoints2018$timeRep2 - surveyPoints2018$sunrise)/60)
+surveyPoints2018$masRep3 <- as.numeric((surveyPoints2018$timeRep3 - surveyPoints2018$sunrise)/60)
+surveyPoints2018$masRep4 <- as.numeric((surveyPoints2018$timeRep4 - surveyPoints2018$sunrise)/60)
+
+#Convert observer initials to a factor number
+levels(surveyPoints2015$observer)
+levels(surveyPoints2018$observer)
+surveyPoints2015$obs <- ifelse(surveyPoints2015$observer == "CCR",1, ifelse(surveyPoints2015$observer == "JASF", 2, 
+                                                 ifelse(surveyPoints2015$observer == "JASV", 3, NA)))
+surveyPoints2018$obs <- ifelse(surveyPoints2018$observer == "CCR",1, ifelse(surveyPoints2018$observer == "JASF", 2, 
+                                                                            ifelse(surveyPoints2018$observer == "JASV", 3,
+                                                                                   ifelse(surveyPoints2018$observer == "AP", 4,
+                                                                                          ifelse(surveyPoints2018$observer == "GL", 5,
+                                                                                                 ifelse(surveyPoints2018$observer == "SAC",6,
+                                                                                                        ifelse(surveyPoints2018$observer == "LR", 7, NA)))))))
+
+
+#Put covariates in correct form:
+#time
+
+tmp1 <-
+  select(surveyPoints2015, point, masRep1, masRep2,masRep3,masRep4)
+tmp2 <-
+  select(surveyPoints2018, point, masRep1, masRep2,masRep3,masRep4)
+tmp1$year <- as.integer(2015)
+tmp2$year <- as.integer(2018)
+tmp3 <- full_join(tmp1, tmp2)
+rm(tmp1, tmp2)  
+time.df <- gather(tmp3, key = "rep", value = "mas", 2:5)
+time.df <-
+  time.df %>%
+  mutate(rep = ifelse(rep == "masRep1", 1,
+                      ifelse(rep == "masRep2", 2,
+                             ifelse(rep == "masRep3", 3,
+                                    ifelse(rep == "masRep4", 4, NA)))))
+rm(tmp3)
+#Create array of survey times:
+junk.melt2 <- melt(time.df,id.var=c("point", "rep", "year"), measure.var="mas")
+time.array <- cast(junk.melt2, point ~ year ~ rep)
+#change the NA to zero. JAGS doesn't handle missing covariates. 
+#these values will be ignored anyways because the occurence data are NA for those points.
+time.array[which(is.na(time.array))] <- 0
+#mean center the times:
+time.array[,,] <- (time.array[,,]-mean(time.array[,,]))/sd(time.array[,,])
+
+
+# dates
+tmp1 <-
+  select(surveyPoints2015, point, jdate)
+tmp2 <-
+  select(surveyPoints2018, point, jdate)
+tmp1$year <- as.integer(2015)
+tmp2$year <- as.integer(2018)
+tmp1 <-
+  mutate(tmp1, jdateRep2 = jdate, jdateRep3 = jdate, jdateRep4 = jdate)
+tmp2 <-
+  mutate(tmp2, jdateRep2 = jdate, jdateRep3 = jdate, jdateRep4 = jdate)
+tmp3 <- full_join(tmp1, tmp2)
+rm(tmp1, tmp2)  
+date.df <- gather(tmp3, key = "rep", value = "date", c(2,4:6))
+date.df <-
+  date.df %>%
+  mutate(rep = ifelse(rep == "jdate", 1,
+                      ifelse(rep == "jdateRep2", 2,
+                             ifelse(rep == "jdateRep3", 3,
+                                    ifelse(rep == "jdateRep4", 4, NA)))))
+rm(tmp3)
+
+#Create array of survey times:
+junk.melt3 <- melt(date.df,id.var=c("point", "rep", "year"), measure.var="date")
+date.array <- cast(junk.melt3, point ~ year ~ rep)
+#change the NA to zero. JAGS doesn't handle missing covariates. 
+#these values will be ignored anyways because the occurence data are NA for those points.
+date.array[which(is.na(date.array))] <- 0
+#mean center the times:
+date.array[,,] <- (date.array[,,]-mean(date.array[,,]))/sd(date.array[,,])
+
+#observers
+# obs
+tmp1 <-
+  select(surveyPoints2015, point, obs)
+tmp2 <-
+  select(surveyPoints2018, point, obs)
+tmp1$year <- as.integer(2015)
+tmp2$year <- as.integer(2018)
+tmp1 <-
+  mutate(tmp1, obsRep2 = obs, obsRep3 = obs, obsRep4 = obs)
+tmp2 <-
+  mutate(tmp2, obsRep2 = obs, obsRep3 = obs, obsRep4 = obs)
+tmp3 <- full_join(tmp1, tmp2)
+rm(tmp1, tmp2)  
+obs.df <- gather(tmp3, key = "rep", value = "obs", c(2,4:6))
+obs.df <-
+  obs.df %>%
+  mutate(rep = ifelse(rep == "obs", 1,
+                      ifelse(rep == "obsRep2", 2,
+                             ifelse(rep == "obsRep3", 3,
+                                    ifelse(rep == "obsRep4", 4, NA)))))
+rm(tmp3)
+
+#Create array of observers:
+junk.melt4 <- melt(obs.df,id.var=c("point", "rep", "year"), measure.var="obs")
+obs.array <- cast(junk.melt4, point ~ year ~ rep)
+#change the NA to zero. JAGS doesn't handle missing covariates. 
+#these values will be ignored anyways because the occurence data are NA for those points.
+obs.array[which(is.na(obs.array))] <- 0
+
+# Key arrays/vectors/matrices at this point:
+# X.aug, the zero-augmented set of occurrence data.
+# date.array, an array of survey dates to be used as covariates on detection.
+# obs.array, an array of dummy variables coding for observer identity, to be used as a covariate on detection.
+# time.array, an array of survey times, to be used as covariates on detection.
+# J = no. of points (227)
+# K = no. of reps 
+# n = no. of species counted
+# Y = no. of years
+# dietGroup = vector of values indicating in which diet group a species belongs
+# migrantGroup = vector of 1/2 indicating whether a species is resident(1) or migrant (2)
+
+# Write the model code to a text file 
+sink("PRModel1.txt")
+cat("
+   model{
+    
+  ## Define prior distributions for community-level model parameters
+  ## The parameter estimating the prob that a species is included in the 'hyper community'
+  
+  omega ~ dunif(0,1)
+
+  ## Prior for the community level hyper parameter on mean occupancy
+
+  u.mean ~ dunif(0,1)
+  mu.u <- log(u.mean) - log(1-u.mean)
+
+  ## Prior for the community level hyper parameter on mean detection
+
+  v.mean ~ dunif(0,1)
+  mu.v <- log(v.mean) - log(1-v.mean)
+
+  ## Prior for the community level hyper parameter for precision of occupancy and detection
+  
+  tau.u ~ dgamma(0.1,0.1)
+  tau.v ~ dgamma(0.1,0.1)
+
+  ## Prior for intercept on phi
+
+  phi0 ~ dunif(0,1)
+
+  ## Prior for interecept on gamma
+
+  gam0 ~ dunif(0,1)
+
+  ### Priors for detection coefficients
+    p.date ~ dnorm(0,0.001)
+    p.time ~ dnorm(0,0.001)
+    #p.obs ~ dnorm(0,0.001)
+  
+  ### Loop over all species i (including the n observed species and the nzeroes nonobserved species
+  ### that may or may not be in the hyper community
+  
+  for (i in 1:(n+nzeroes)) {
+    #### Create priors for species i from the community level prior distributions
+    
+    ##### Binary variable indicating whether a species is in fact in the hyper community
+    ##### will always be a 1 if at least one individual was detected
+    
+    w[i] ~ dbern(omega)
+    
+    ##### Prior distribution for intercept term of species occupancy 
+    u[i] ~ dnorm(mu.u, tau.u)
+    
+    ##### Prior distribution for intercept term of species detection
+    v[i] ~ dnorm(mu.v, tau.v)
+
+    ### Create a loop to estimate the Z matrix (true occurrence for species i 
+    ### at point j) for all J sites.    
+    
+    ##### Occurence, year 1
+    
+    for (j in 1:J) {
+      for(y in 1:Y) {
+      logit(psi[j,1,i]) <- u[i]
+      mu.psi.1[j,1,i] <- psi[j,1,i] * w[i]
+      Z[j,1,i] ~ dbern(mu.psi.1[j,1,i])
+
+
+    ##### Occurence in subsequent years
+        for(m in 1:2) {
+          for(d in 1:7) {
+    
+    ##### rate of persistence (phi)
+    ###### priors
+      phi.migrate[m] ~ dnorm(0,0.001)
+      gam.migrate[m] ~ dnorm(0,0.001)
+      phi.diet[d] ~ dnorm(0,0.001)
+      gam.diet[d] ~ dnorm(0,0.001)
+
+      logit(phi[j,i]) <- phi0 + phi.migrate[m]*migrantGroup[i] + phi.diet[d]*dietGroup[i]
+
+    ##### rate of colonization (gamma)
+
+      logit(gam[j,i]) <- gam0 + gam.migrate[m]*migrantGroup[i] + gam.diet[d]*dietGroup[i]
+          
+          } #diet
+        } #migrate
+
+    ##### occurrence in year 2
+      
+      psi[j,2,i] <- (Z[j,2,i] * phi[j,i] + (1 - Z[j,2,i]) * gam[j,i])
+      Z[j,2,i] ~ dbern(psi[j,2,i])
+
+    ##### Detection
+
+      for (k in 1:K[j]) {
+        for (o in 1:7) {
+      p.obs[o] ~ dnorm(0,0.001)
+      logit(p[j,y,k,i]) <- v[i] + p.date[date.array[j,y,k]] + p.time[time.array[j,y,k]] + p.obs[o]*obs.array[j,y,k]
+      mu.y[j,y,k,i] <- p[j,y,k,i]*Z[j,y,i]
+        } #observer
+
+    ##### Observed deviance
+
+      dev[j,y,k,i] <- y[j,y,k,i]*log(mu.y[j,y,k,i]) + (1-y[j,y,k,i])*log(1-mu.y[j,y,k,i])
+
+    ###### Predict new observation and compute deviance
+
+      y.new[j,y,k,i] ~ dbern(mu.y[j,y,k,i])
+      dev.sim[j,y,k,i] <- y.new[j,y,k,i]*log(mu.y[j,y,k,i]) + (1-y.new[j,y,k,i])*log(1-mu.y[j,y,k,i])
+
+      } #rep
+    } #year
+  } # site
+} #species
+
+    ### Derived values
+   
+    sum.dev <- sum(dev[,,,])
+    sum.dev.sim <- sum(dev.sim[,,,])
+
+    test <- step(sum.dev.sim - sum.dev)
+    bpvalue <- mean(test)
+
+
+    #### Sum all species observed (n) and unobserved species (n0) to find the 
+    #### total estimated richness
+    
+    n0 <- sum(w[(n+1):(n+nzeroes)])
+    N <- n + n0
+    
+    #### Create a loop to determine point level richness estimates for the 
+    #### whole community and for subsets or assemblages of interest.
+    
+    for(j in 1:J){
+      for(y in 1:Y){
+    Nsite[j]<- inprod(Z[j,y,1:(n+nzeroes)],w[1:(n+nzeroes)])
+      } # j
+    } #y
+
+#Finish writing the text file into a document we call covarmodel.txt
+} #model
+",fill = TRUE)
+sink()
+
+# Load the data.
+sp.data = list(n = n, Y = Y, nzeroes = nzeroes, J = J, K = K, X = Xaug, date.array = date.array,
+               time.array = time.array, obs.array = obs.array, migrantGroup = migrantGroup,
+               dietGroup = dietGroup)
+
+# Specify the parameters to be monitored
+sp.params <- c("Nsite","n0", "N", "bpvalue", "p.date", "p.time", "p.obs","phi.migrate", "phi.diet","gam.migrate", "gam.diet",
+               "phi0", "gam0", "u")
+
+#Specify the initial values
+#zinits <- apply(Xaug,c(1,4),max,na.rm=TRUE)
+zst<-array(0,dim=c(J,Y,n+nzeroes))
+#y <- Xaug
+for (j in 1:J)  {
+  for (y in 1:Y)  {
+    for (i in 1:(n+nzeroes)) {
+      zst[j,y,i]<-(sum(Xaug[j,y,,i])>0)*1
+    }}}
+zst[is.na(zst)]<-1
+
+sp.inits = function() {
+  omegaGuess = runif(1, n/(n+nzeroes), 1)
+  psi.meanGuess = runif(1, .25,1)
+  list(omega=omegaGuess,w=c(rep(1, n), rbinom(nzeroes, size=1, prob=omegaGuess)),
+       Z = zst, p.date = runif(1,-2,2), p.time = runif(1,-2,2), p.obs = runif(1,-2,2),
+       gam.migrate = runif(1,-2,2), gam.diet = runif(1,-2,2), phi.migrate = runif(1,-2,2),
+       phi.diet = runif(1,-2,2))
+}
+
+# MCMC settings
+ni <- 10000 # number of total iterations per chain
+nt <-    20 # thinning rate 
+nb <- 3000 # number of iterations to discard at the beginning
+nc <-     3 # number of Markov chains
+na <- 1000 # Number of iterations to run in the JAGS adaptive phase.
+
+#Run the model and call the results ?fit?
+#library(jagsUI)
+startTime <- proc.time()
+fit <- jagsUI(data = sp.data, inits = sp.inits, sp.params,
+              "PRModel1.txt", n.chains = nc, n.thin = nt,
+              n.iter = ni, n.burnin = nb, n.adapt = na, parallel = T, store.data=T)
+endTime <- proc.time()
+elapsedTime <- endTime - startTime
+elapsedTime
+    
+    

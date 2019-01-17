@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1546888933588.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "19F543BF",
+    "lastKnownWriteTime" : 7379539615090287104,
+    "last_content_update" : 1546888933588,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "81975F7D",
+        "caption" : "surveyPoints2015",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=surveyPoints2015&cache_key=81975F7D",
+        "displayedObservations" : "211",
+        "environment" : "",
+        "object" : "surveyPoints2015",
+        "preview" : "0",
+        "totalObservations" : "211",
+        "variables" : "21"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

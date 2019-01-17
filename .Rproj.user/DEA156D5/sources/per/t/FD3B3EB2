@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1546643074999.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "FD3B3EB2",
+    "lastKnownWriteTime" : 7306087009443905542,
+    "last_content_update" : 1546643074999,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "26106516",
+        "caption" : "surveyPoints2018",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=surveyPoints2018&cache_key=26106516",
+        "displayedObservations" : "205",
+        "environment" : "",
+        "object" : "surveyPoints2018",
+        "preview" : "0",
+        "totalObservations" : "205",
+        "variables" : "16"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

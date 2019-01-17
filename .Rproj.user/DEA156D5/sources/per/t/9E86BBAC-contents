@@ -1,0 +1,18 @@
+---
+title: "Forest-bird assemblages in Puerto Rico before and after Hurricane Maria"
+author: "John D. Lloyd"
+date: "12/21/2018"
+output: html_document
+bibliography: ["/Users/johnlloyd/Documents/GitHub/puertoRicoHurricaneStudy/references.bib"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Introduction
+
+#Materials and methods
+We used a hierarchical multi-season, multi-species model to compare the composition and structure of the forest-bird assemblage before (2015) and several months after (2018) Hurricane Maria. Based on previous research, we expected that occurrence of frugivores and nectarivores would decline, whereas occurrence of insectivores, granivores, and omnivores would not. We also expected that average species richness would decline with the decreased frequency of occurence of frugivores and nectarivores, even as assemblage-wide species richness remained stable. To test these predictions, we a) estimated occupancy rates for each species; b) estimated persistence rates for each dietary guild between 2015 and 2018; c) estimated assemblage-wide species richness, including unobserved species, in both years; and d) estimated local species richness at each point in both years. 
+
+In the model, X~*i,j,t,k*~ is a matrix that indicates whether we detected (X~*i,j,t,k*~ = 1) or failed to detect (X~*i,j,t,k*~ = 0) species *i* at site *j* during the *k*^*th*^ survey at that site in year *t*. The true occupancy state of each species at each site in each year is denoted as *z*~*i,j,t*~; *z* = 1 if the species is present and *z* = 0 if it is absent. The initial occupancy state, that is the presence of species *i* at site *j* in 2015, was modeled as a Bernoulli random variable: *z*~*i,j,*2015~ ~ Bern(*w*~*i*~$\Psi$~*i,j*,2015~), where $\Psi$~*i,j*,2015~ reflected the probability that species *i* was present at site *j* in 2015 and *w*~*i*~ is a latent random variable indicated whether species *i* is a member of the metacommunity of species available for detection during the survey period [@dorazio2010models]. We estimated *w*~*i*~ using data augmentation We estimated the probability that species *i* persisted at site *j* from 2015 to 2018 as $\phi$~*i,j,t*~ and the probability that species *i* colonized site *j* between 2015 and 2018 as $\gamma$~*i,j,t*~. 

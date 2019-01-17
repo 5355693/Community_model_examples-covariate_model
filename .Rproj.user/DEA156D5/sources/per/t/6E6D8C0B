@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1545251062772.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "6E6D8C0B",
+    "lastKnownWriteTime" : 6998720716285100870,
+    "last_content_update" : 1545251062772,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "7C5C3DB2",
+        "caption" : "habitat",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=habitat&cache_key=7C5C3DB2",
+        "displayedObservations" : 70,
+        "environment" : "",
+        "object" : "habitat",
+        "preview" : 0,
+        "totalObservations" : 70,
+        "variables" : 3
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

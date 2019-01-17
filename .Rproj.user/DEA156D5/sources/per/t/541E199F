@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1545247857812.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3439774204",
+    "id" : "541E199F",
+    "lastKnownWriteTime" : 1545340895,
+    "last_content_update" : 1545340895,
+    "path" : "~/Documents/GitHub/Community_model_examples-covariate_model/covariate model code.r",
+    "project_path" : "covariate model code.r",
+    "properties" : {
+        "cursorPosition" : "216,2",
+        "scrollLine" : "194"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1547655890067.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4215088011",
+    "id" : "1CA6A7F9",
+    "lastKnownWriteTime" : 1547756016,
+    "last_content_update" : 1547756016132,
+    "path" : "~/Documents/GitHub/Community_model_examples-covariate_model/prNoCov.R",
+    "project_path" : "prNoCov.R",
+    "properties" : {
+        "cursorPosition" : "160,9",
+        "scrollLine" : "154",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 20,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

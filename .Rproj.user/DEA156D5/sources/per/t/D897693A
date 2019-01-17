@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1547138806340.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "D897693A",
+    "lastKnownWriteTime" : 7306087011045700713,
+    "last_content_update" : 1547138806340,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "90E21EE1",
+        "caption" : "groupCovs",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=groupCovs&cache_key=90E21EE1",
+        "displayedObservations" : 75,
+        "environment" : "",
+        "object" : "groupCovs",
+        "preview" : 0,
+        "totalObservations" : 75,
+        "variables" : 3
+    },
+    "relative_order" : 19,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
